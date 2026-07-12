@@ -17,7 +17,17 @@ const register= async (req,res)=> {
         const user=await User.create(req.body);
         const token=jwt.sign({_id:user._id,emailId:user.emailId,role:'user'},process.env.SECRET_KEY,{expiresIn:60*60});
         res.cookie("token",token,{maxAge:60*60*1000});
-        res.status(201).send("user Registered Sucessfully...");
+        
+         const reply={
+            firstName:user.firstName,
+            emailId:user.emailId,
+            _id:user._id
+        };
+
+        res.status(200).json({
+            result:reply,
+            message:"Registered Successfully..."
+        });
     }
     catch(err){
         res.status(400).send("Error: "+err.message);
@@ -38,7 +48,16 @@ const login= async (req,res)=> {
         const token=jwt.sign({_id:user._id,emailId:user.emailId,role:user.role},process.env.SECRET_KEY,{expiresIn:60*60});
         res.cookie("token",token,{maxAge:60*60*1000});
 
-        res.status(200).send("LoggedIN Successfull...");
+        const reply={
+            firstName:user.firstName,
+            emailId:user.emailId,
+            _id:user._id
+        };
+
+        res.status(200).json({
+            result:reply,
+            message:"Login Successfully..."
+        });
     }
     catch(err){
         res.status(400).send("Error: "+err.message);
@@ -102,5 +121,23 @@ const deleteProfile=async (req,res) => {
     }
 }
 
+const authenticate=async (req,res) =>{
+    try{
+        const reply={
+            emailId:req.result.emailId,
+            firstName:req.result.firstName,
+            _id:req.result._id
+        }
 
-export default {register,login,getProfile,logout,admin,deleteProfile}; 
+        res.status(200).json({
+            result:reply,
+            message:"User logged in..."
+        });
+    }
+    catch(err){
+        res.status(400).send("Error: "+err.message);
+    }
+}
+
+
+export default {register,login,getProfile,logout,admin,deleteProfile,authenticate}; 

@@ -12,5 +12,6 @@ export default express.Router()
 .post('/logout',userMiddleware,authController.logout)
 .get('/getProfile',userMiddleware,authController.getProfile)
 .post("/admin/register",adminMiddleware,authController.admin)
-.delete("/profile",userMiddleware,authController.deleteProfile);
+.delete("/profile",userMiddleware,authController.deleteProfile)
+.get("/authenticate",userMiddleware,authController.authenticate);
 

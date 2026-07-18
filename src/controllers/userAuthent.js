@@ -30,6 +30,7 @@ const register= async (req,res)=> {
         });
     }
     catch(err){
+        console.log("Register Error:", err);
         res.status(400).send("Error: "+err.message);
     }
 }

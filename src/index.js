@@ -7,17 +7,21 @@ import authRouter from "./Routes/userauthen.js";
 import client from "./config/redis.js";
 import problemRouter from "./Routes/problemCreator.js";
 import SubmitRouter from "./Routes/submit.js";
+import cors from "cors";
 
 const app=express();
 
 
 //Middlewares
+app.use(cors({
+    origin:"http:/localhost:5173",
+    credentials:true
+}));
 app.use(express.json());
 app.use(cookieparser());
 app.use("/user",authRouter);
 app.use("/user",problemRouter);
 app.use("/user",SubmitRouter);
-
 
 const InitializeConnection=async ()=>{
     try{

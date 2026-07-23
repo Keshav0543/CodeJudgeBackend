@@ -1,6 +1,6 @@
 import client from "../config/redis.js";
-const TotalTTl=3600;
-const max_req=2;
+const TotalTTl=600;
+const max_req=10;
 
 const LoginLimit= async (req,res,next) =>{
     try{

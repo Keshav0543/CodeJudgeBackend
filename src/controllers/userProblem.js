@@ -150,7 +150,7 @@ const FetchProblem = async (req, res) => {
 
 const getAllProblem = async (req, res) => {
   try {
-    const AllProb = await problem.find({}).select("title tags");
+    const AllProb = await problem.find({}).select("title tags difficultylevel");
 
     if (AllProb.length == 0) throw new Error("Problem is missing...");
     res.status(200).send(AllProb);

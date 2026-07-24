@@ -43,7 +43,7 @@ const login= async (req,res)=> {
 
         const user=await User.findOne({emailId});
 
-        const match= bcrypt.compare(password,user.password);
+        const match= await bcrypt.compare(password,user.password);
         if(!match)throw new Error("Invalid credentials");
 
         const token=jwt.sign({_id:user._id,emailId:user.emailId,role:user.role},process.env.SECRET_KEY,{expiresIn:60*60});
@@ -82,7 +82,7 @@ const logout= async (req,res)=> {
 
         await client.set(`token:${token}`,`Blocked`);
         await client.expireAt(`token:${token}`,payload.exp);
-        res.cookie("token",null,{expires:new Date(Date.now())});
+        res.clearCookie("token");
         res.status(200).send("User LoggedOut...");
     }
     catch(err){

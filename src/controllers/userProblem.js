@@ -3,7 +3,7 @@ import {
   submitBatch,
   submitToken,
 } from "../utils/Problemutility.js";
-import problem from "../models/problem.js";
+import Problem from "../models/problem.js";
 import user from "../models/user.js";
 
 const NewProblem = async (req, res) => {
@@ -47,7 +47,7 @@ const NewProblem = async (req, res) => {
     }
 
     //Store in Database
-    const Userproblem = await problem.create({
+    const Userproblem = await Problem.create({
       ...req.body,
       problemCreator: req.result._id,
     });
@@ -101,10 +101,10 @@ const UpdateProblem = async (req, res) => {
 
     if (!id) throw new Error("Missing Id Field");
 
-    const DsaProb = await problem.findById(id);
+    const DsaProb = await Problem.findById(id);
     if (!DsaProb) throw new Error("Required Valid Id...");
 
-    const update = await problem.findByIdAndUpdate(id, req.body, {
+    const update = await Problem.findByIdAndUpdate(id, req.body, {
       new: true,
       runValidators: true,
     });
@@ -120,9 +120,9 @@ const DeleteProblem = async (req, res) => {
     const id = req.params.id;
     if (!id) throw new Error("Id is required...");
 
-    const DsaProb = await problem.findById(id);
+    const DsaProb = await Problem.findById(id);
     if (!DsaProb) throw new Error("Invalid Id...");
-    await problem.findByIdAndDelete(id);
+    await Problem.findByIdAndDelete(id);
 
     res.status(200).send("Problem Deleted SuccessFully...");
   } catch (err) {
@@ -135,7 +135,7 @@ const FetchProblem = async (req, res) => {
     const id = req.params.id;
     if (!id) throw new Error("Id is missing...");
 
-    const DsaProb = await problem
+    const DsaProb = await Problem
       .findById(id)
       .select(
         "title description difficultylevel tags  visibleTestcases  startCode referenceSolution",
@@ -150,7 +150,7 @@ const FetchProblem = async (req, res) => {
 
 const getAllProblem = async (req, res) => {
   try {
-    const AllProb = await problem.find({}).select("title tags difficultylevel");
+    const AllProb = await Problem.find({}).select("title tags difficultylevel");
 
     if (AllProb.length == 0) throw new Error("Problem is missing...");
     res.status(200).send(AllProb);

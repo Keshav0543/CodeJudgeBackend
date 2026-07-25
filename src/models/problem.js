@@ -33,7 +33,6 @@ const problemSchema=new Schema({
             },
             output:{
                 type:String,
-                required:true
             },
             explanation:{
                 type:String,
@@ -50,7 +49,6 @@ const problemSchema=new Schema({
             },
             output:{
                 type:String,
-                required:true
             },
             
         }

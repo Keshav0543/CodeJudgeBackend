@@ -39,8 +39,26 @@ const NewProblem = async (req, res) => {
 
       for (const test of FinalResult) {
         if (test.status.id > 3) {
+          let detail = "";
+
+          if (test.status.id === 6) {
+            // Compilation Error
+            detail = test.compile_output || "No compile output returned";
+          } else if (test.status.id >= 7 && test.status.id <= 12) {
+            // Runtime errors (SIGSEGV, SIGABRT, NZEC, etc.)
+            detail = test.stderr || "No stderr returned";
+          } else if (test.status.id === 5) {
+            // Time Limit Exceeded
+            detail = `Time limit exceeded (${test.time}s)`;
+          } else if (test.status.id === 4) {
+            // Wrong Answer
+            detail = `Expected: "${test.expected_output}" | Got: "${test.stdout}"`;
+          } else {
+            detail = test.message || "No additional details";
+          }
+
           throw new Error(
-            `Reference solution failed on a visible testcase: ${test.status.description}`,
+            `Reference solution failed on a visible testcase [${test.status.description}]: ${detail}`,
           );
         }
       }
@@ -135,11 +153,9 @@ const FetchProblem = async (req, res) => {
     const id = req.params.id;
     if (!id) throw new Error("Id is missing...");
 
-    const DsaProb = await Problem
-      .findById(id)
-      .select(
-        "title description difficultylevel tags  visibleTestcases  startCode referenceSolution",
-      );
+    const DsaProb = await Problem.findById(id).select(
+      "title description difficultylevel tags  visibleTestcases  startCode referenceSolution",
+    );
     if (!DsaProb) throw new Error("Required Valid Id...");
 
     res.status(200).send(DsaProb);
@@ -169,7 +185,7 @@ const SolvedProblem = async (req, res) => {
     if (ProblemSolve.length == 0)
       throw new Error("No Problem Solved Right Now...");
 
-    const UserInfo = await req.result.populate("ProblemSolved","title tags");
+    const UserInfo = await req.result.populate("ProblemSolved", "title tags");
 
     const TitleInfo = UserInfo.ProblemSolved;
 

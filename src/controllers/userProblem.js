@@ -221,6 +221,25 @@ const SolvedProblem = async (req, res) => {
   }
 };
 
+const searchProblem = async (req,res) => {
+  try{
+    const q=req.query.q?.trim();
+    if(!q)return res.status(200).json([]);
+
+    const result=await Problem.find({
+      title:{
+        $regex:"^"+q,
+        $options:"i"
+      }
+    }).select("_id title difficultylevel tags").limit(10);
+
+    res.status(200).json(result);
+  }
+  catch(error){
+    res.status(500).send("Error: "+error.message);
+  }
+};
+
 export default {
   NewProblem,
   UpdateProblem,
@@ -228,4 +247,5 @@ export default {
   FetchProblem,
   getAllProblem,
   SolvedProblem,
+  searchProblem
 };

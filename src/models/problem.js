@@ -89,6 +89,10 @@ const problemSchema=new Schema({
     }
 });
 
+problemSchema.index({
+    title:1
+});
+
 const Problem=mongoose.model("problem",problemSchema);
 
 export default Problem;

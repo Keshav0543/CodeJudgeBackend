@@ -14,5 +14,6 @@ problemRouter.delete('/Delete/:id',adminMiddleware,ProblemController.DeleteProbl
 problemRouter.get('/ProblemById/:id',userMiddleware,ProblemController.FetchProblem);
 problemRouter.get('/GetAllProblem',userMiddleware,ProblemController.getAllProblem);
 problemRouter.get('/ProblemSolvedByUser',userMiddleware,ProblemController.SolvedProblem);
+problemRouter.get('/search',userMiddleware,ProblemController.searchProblem);
 
 export default problemRouter;

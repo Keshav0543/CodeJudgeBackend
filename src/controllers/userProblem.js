@@ -193,7 +193,6 @@ const FetchProblem = async (req, res) => {
 const getAllProblem = async (req, res) => {
   try {
     const AllProb = await Problem.find({}).select("title tags difficultylevel");
-
     if (AllProb.length == 0) throw new Error("Problem is missing...");
     res.status(200).send(AllProb);
   } catch (err) {
@@ -209,7 +208,7 @@ const SolvedProblem = async (req, res) => {
 
     const ProblemSolve = req.result.ProblemSolved;
     if (ProblemSolve.length == 0)
-      throw new Error("No Problem Solved Right Now...");
+     return res.status(200).json([]);
 
     const UserInfo = await req.result.populate("ProblemSolved", "title tags");
 

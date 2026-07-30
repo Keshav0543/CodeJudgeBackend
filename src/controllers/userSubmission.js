@@ -32,9 +32,11 @@ const SubmitCode = async (req, res) => {
     //Judge0 Submission
     const LangId = getlanguageId(language);
     const submission = [];
+    const driver=Problem.driverCode.find((data)=>data.language.toLowerCase()===language.toLowerCase());
+    if(!driver)throw new Error(`No driver code for language "${language}"`);
     for (const data of Problem.invisibleTestcases) {
       submission.push({
-        source_code: code,
+        source_code: code+driver.code,
         language_id: LangId,
         stdin: data.input,
         expected_output: data.output,
@@ -95,6 +97,8 @@ const RunCode= async (req,res) => {
     if(!id)throw new Error("Required Missing Field...");
 
     const Problem=await problem.findById(id);
+    const driver=Problem.driverCode.find((data)=>data.language.toLowerCase()===language.toLowerCase());
+    if(!driver)throw new Error(`No driver code for language "${language}"`);
     //Judge0 Submission
     const LangId = getlanguageId(language);
     if (!LangId)
@@ -102,7 +106,7 @@ const RunCode= async (req,res) => {
     const submission = [];
     for (const data of Problem.visibleTestcases) {
       submission.push({
-        source_code: code,
+        source_code: code+driver.code,
         language_id: LangId,
         stdin: data.input,
         expected_output: data.output,

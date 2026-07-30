@@ -21,7 +21,6 @@ const problemSchema=new Schema({
 
     tags:{
         type:String,
-        enum:['array','linked-list','graph','dp','binary-search'],
         required:true
     },
 
@@ -65,6 +64,19 @@ const problemSchema=new Schema({
                 type:String,
                 required:true
             }
+        }
+    ],
+
+    driverCode:[
+        {
+           language:{
+            type:String,
+            required:true
+           },
+           code:{
+            type:String,
+            required:true
+           }
         }
     ],
 

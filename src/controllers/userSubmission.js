@@ -84,7 +84,7 @@ const SubmitCode = async (req, res) => {
       req.result.ProblemSolved.push(problemId);
       await req.result.save();
     }
-    res.status(201).send("Submitted_Result...");
+    res.status(200).json(SubmittedResult);
   } catch (err) {
     res.status(400).send("Error: " + err.message);
   }

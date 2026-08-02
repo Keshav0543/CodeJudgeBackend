@@ -32,11 +32,13 @@ const SubmitCode = async (req, res) => {
     //Judge0 Submission
     const LangId = getlanguageId(language);
     const submission = [];
-    const driver=Problem.driverCode.find((data)=>data.language.toLowerCase()===language.toLowerCase());
-    if(!driver)throw new Error(`No driver code for language "${language}"`);
+    const driver = Problem.driverCode.find(
+      (data) => data.language.toLowerCase() === language.toLowerCase(),
+    );
+    if (!driver) throw new Error(`No driver code for language "${language}"`);
     for (const data of Problem.invisibleTestcases) {
       submission.push({
-        source_code: code+driver.code,
+        source_code: code + driver.code,
         language_id: LangId,
         stdin: data.input,
         expected_output: data.output,
@@ -55,21 +57,61 @@ const SubmitCode = async (req, res) => {
     let errorMessage = null;
 
     for (const result of FinalResult) {
-      if (result.status_id == 3) {
+      if (result.status_id === 3) {
         testCasesPassed++;
         runtime += parseFloat(result.time) * 1000;
         memory = Math.max(result.memory, memory);
-      } else {
-        if (result.status_id == 4) {
-          status = "error";
-          errorMessage = result.stderr;
-        } else {
-          status = "wrong";
-          errorMessage = result.stderr;
-        }
+        continue;
       }
-    }
 
+      // pehli baar hi fail hua toh status set karo (varna baad ke passed cases se overwrite ho sakta hai agar tu loop ke bahar bhi kuch check karta hai)
+      switch (result.status_id) {
+        case 4:
+          status = "wrong_answer";
+          errorMessage =
+            result.stderr || "Output did not match expected output";
+          break;
+
+        case 5:
+          status = "tle";
+          errorMessage = "Time Limit Exceeded";
+          break;
+
+        case 6:
+          status = "compilation_error";
+          errorMessage = result.compile_output || "Compilation failed";
+          break;
+
+        case 7:
+        case 8:
+        case 9:
+        case 10:
+        case 11:
+        case 12:
+          status = "runtime_error";
+          errorMessage =
+            result.stderr ||
+            `Runtime Error (${result.status.description || "unknown signal"})`;
+          break;
+
+        case 13:
+          status = "internal_error";
+          errorMessage = "Judge0 internal error, try again";
+          break;
+
+        case 14:
+          status = "exec_format_error";
+          errorMessage = "Executable format error";
+          break;
+
+        default:
+          status = "unknown";
+          errorMessage = result.stderr || "Unknown error occurred";
+      }
+
+      // pehla fail milte hi loop se bahar niklo (competitive judges aise hi karte hain)
+      break;
+    }
     //Store the result in Database
     SubmittedResult.status = status;
     SubmittedResult.testCasesPassed = testCasesPassed;
@@ -80,7 +122,10 @@ const SubmitCode = async (req, res) => {
     await SubmittedResult.save();
 
     //Problem Id insert in User Schema problem section if it is not present
-    if (req.result.ProblemSolved.length==0 || !req.result.ProblemSolved.includes(problemId)) {
+    if (
+      SubmittedResult.status==="Accepted" &&
+      !req.result.ProblemSolved.includes(problemId)
+    ) {
       req.result.ProblemSolved.push(problemId);
       await req.result.save();
     }
@@ -90,47 +135,48 @@ const SubmitCode = async (req, res) => {
   }
 };
 
-const RunCode= async (req,res) => {
-  try{
+const RunCode = async (req, res) => {
+  try {
     const { code, language } = req.body;
-    const id=req.params.id;
-    if(!id)throw new Error("Required Missing Field...");
+    const id = req.params.id;
+    if (!id) throw new Error("Required Missing Field...");
 
-    const Problem=await problem.findById(id);
-    const driver=Problem.driverCode.find((data)=>data.language.toLowerCase()===language.toLowerCase());
-    if(!driver)throw new Error(`No driver code for language "${language}"`);
+    const Problem = await problem.findById(id);
+    const driver = Problem.driverCode.find(
+      (data) => data.language.toLowerCase() === language.toLowerCase(),
+    );
+    if (!driver) throw new Error(`No driver code for language "${language}"`);
     //Judge0 Submission
     const LangId = getlanguageId(language);
-    if (!LangId)
-    throw new Error("Unsupported language");
+    if (!LangId) throw new Error("Unsupported language");
     const submission = [];
     for (const data of Problem.visibleTestcases) {
       submission.push({
-        source_code: code+driver.code,
+        source_code: code + driver.code,
         language_id: LangId,
         stdin: data.input,
         expected_output: data.output,
       });
     }
-    
+
     const submitResult = await submitBatch(submission);
     const resultToken = submitResult.map((value) => value.token);
     const FinalResult = await submitToken(resultToken);
-    const ans=[];
-    for(const data of FinalResult){
+    console.log(FinalResult);
+    const ans = [];
+    for (const data of FinalResult) {
       ans.push({
-      stdin:data.stdin,
-      stdout:data.stdout,
-      status:data.status,
-      memory:data.memory,
-      time:Number(data.time)*1000
-      })
+        stdin: data.stdin,
+        stdout: data.stdout,
+        status: data.status,
+        memory: data.memory,
+        time: Number(data.time) * 1000,
+      });
     }
     res.status(200).send(ans);
-  }
-  catch(err){
-    res.status(400).send("Error: "+err.message);
+  } catch (err) {
+    res.status(400).send("Error: " + err.message);
   }
 };
 
-export default { SubmitCode, RunCode};
+export default { SubmitCode, RunCode };

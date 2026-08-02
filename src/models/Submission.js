@@ -28,8 +28,6 @@ const submissionSchema = new Schema({
   status:{
     type:String,
     required:true,
-    enum: ["pending","Accepted","wrong","error"],
-    default:"pending"
   },
 
   runtime:{

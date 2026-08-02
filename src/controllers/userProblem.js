@@ -171,7 +171,6 @@ const SolvedProblem = async (req, res) => {
     const UserInfo = await req.result.populate("ProblemSolved", "title tags");
 
     const TitleInfo = UserInfo.ProblemSolved;
-
     res.status(200).send(TitleInfo);
   } catch (err) {
     res.status(400).send("Error: " + err.message);

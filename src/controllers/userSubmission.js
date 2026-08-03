@@ -179,4 +179,22 @@ const RunCode = async (req, res) => {
   }
 };
 
-export default { SubmitCode, RunCode };
+const getSubmissionDetail= async (req,res) =>{
+  try{
+    const {problemId}=req.params;
+    const userId= req.result?._id;
+    if(!userId)throw new Error("u Dont have access to this information...");
+    if(!problemId)throw new Error("Something went wrong...");
+    const detail=await SubmissionS.find({
+      userId,
+      problemId
+    }).sort({createdAt: -1});
+
+    res.status(200).json(detail);
+  }
+  catch(err){
+    res.status(400).send("Error: "+err.message);
+  }
+};
+
+export default { SubmitCode, RunCode , getSubmissionDetail};

@@ -7,5 +7,6 @@ const SubmitRouter=express.Router();
 
 SubmitRouter.post("/submit/:id", userMiddleware, SubmitLimiter, SubmitController.SubmitCode);
 SubmitRouter.post("/run/:id", userMiddleware, RunrateLimit, SubmitController.RunCode);
+SubmitRouter.get("/submission/:problemId", userMiddleware, SubmitController.getSubmissionDetail);
 
 export default SubmitRouter;

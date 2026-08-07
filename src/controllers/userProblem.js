@@ -137,9 +137,7 @@ const FetchProblem = async (req, res) => {
     const id = req.params.id;
     if (!id) throw new Error("Id is missing...");
 
-    const DsaProb = await Problem.findById(id).select(
-      "title description difficultylevel tags  visibleTestcases  startCode referenceSolution",
-    );
+    const DsaProb = await Problem.findById(id);
     if (!DsaProb) throw new Error("Required Valid Id...");
 
     res.status(200).send(DsaProb);

@@ -48,6 +48,11 @@ const userSchema= new Schema({
     password:{
         type:String,
         required:true
+    },
+
+    rating:{
+        type:Number,
+        default:1500
     }
 },{timestamps:true})
 

@@ -7,7 +7,9 @@ import authRouter from "./Routes/userauthen.js";
 import client from "./config/redis.js";
 import problemRouter from "./Routes/problemCreator.js";
 import SubmitRouter from "./Routes/submit.js";
+import ContestRouter from "./Routes/Contest.js";
 import cors from "cors";
+import "./jobs/SchedularJobs1.js";
 
 const app=express();
 
@@ -22,6 +24,7 @@ app.use(cookieparser());
 app.use("/user",authRouter);
 app.use("/user",problemRouter);
 app.use("/user",SubmitRouter);
+app.use("/user",ContestRouter);
 
 const InitializeConnection=async ()=>{
     try{

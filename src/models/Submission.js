@@ -14,6 +14,11 @@ const submissionSchema = new Schema({
     required: true,
   },
 
+  contestId: {
+    type: Schema.Types.ObjectId,
+    ref:"contest"
+  },
+
   code: {
     type: String,
     required: true,
@@ -56,7 +61,7 @@ const submissionSchema = new Schema({
   }
 },{timestamps:true});
 
-submissionSchema.index({userId:1, problemId:1});
+submissionSchema.index({userId:1, problemId:1, contestId:1});
 
 const SubmissionS= mongoose.model("submissionS",submissionSchema);
 

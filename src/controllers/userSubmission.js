@@ -1,5 +1,8 @@
 import problem from "../models/problem.js";
 import SubmissionS from "../models/Submission.js";
+import Contest from "../models/contest.js";
+import Contestparticipant from "../models/contestParticipant.js";
+import mongoose from "mongoose";
 import {
   getlanguageId,
   submitBatch,
@@ -11,12 +14,59 @@ const SubmitCode = async (req, res) => {
     const userId = req.result._id;
     const problemId = req.params.id;
 
-    const { code, language } = req.body;
+    const { code, language, contest_id } = req.body;
     if (!userId || !problemId || !code || !language)
       return res.status(400).send("Field is Missing...");
 
+    let contestcheck, ParticipantCheck;
+    if (contest_id) {
+      contestcheck = await Contest.findById(contest_id);
+
+      if (!contestcheck) throw new Error("Selected Contest is not valid...");
+
+      ParticipantCheck = await Contestparticipant.findOne({
+        contest_id,
+        user_id: req.result._id,
+      });
+
+      if (!ParticipantCheck)
+        throw new Error("User is not registered in Contest...");
+
+      if (ParticipantCheck.status !== "started")
+        throw new Error("Contest is not started...");
+
+      // Check whether this problem belongs to this contest
+      const isPresent = contestcheck.problem.some(
+        (data) => data.problemId.toString() === problemId.toString(),
+      );
+
+      if (!isPresent)
+        throw new Error("Problem is not present in this contest...");
+
+      const currentTime = new Date();
+
+      const userDeadline = new Date(
+        ParticipantCheck.startedAt.getTime() + 90 * 60 * 1000,
+      );
+
+      // Actual deadline = whichever comes first
+      const finalDeadline =
+        userDeadline < contestcheck.endTime
+          ? userDeadline
+          : contestcheck.endTime;
+
+      // Small grace period for network/request delay
+      const gracePeriod = 5 * 1000;
+
+      const allowedUntil = new Date(finalDeadline.getTime() + gracePeriod);
+
+      if (currentTime > allowedUntil)
+        throw new Error("Contest submission time has expired...");
+    }
+
     //Fetch The Problem
     const Problem = await problem.findById(problemId);
+    if (!Problem) throw new Error("Problem not found...");
     //Now we have test cases from above
 
     const SubmittedResult = await SubmissionS.create({
@@ -119,11 +169,13 @@ const SubmitCode = async (req, res) => {
     SubmittedResult.memory = memory;
     SubmittedResult.errorMessage = errorMessage;
 
+    if (contestcheck) SubmittedResult.contestId = contest_id;
+
     await SubmittedResult.save();
 
     //Problem Id insert in User Schema problem section if it is not present
     if (
-      SubmittedResult.status==="Accepted" &&
+      SubmittedResult.status === "Accepted" &&
       !req.result.ProblemSolved.includes(problemId)
     ) {
       req.result.ProblemSolved.push(problemId);
@@ -179,22 +231,124 @@ const RunCode = async (req, res) => {
   }
 };
 
-const getSubmissionDetail= async (req,res) =>{
-  try{
-    const {problemId}=req.params;
-    const userId= req.result?._id;
-    if(!userId)throw new Error("u Dont have access to this information...");
-    if(!problemId)throw new Error("Something went wrong...");
-    const detail=await SubmissionS.find({
+const getSubmissionDetail = async (req, res) => {
+  try {
+    const { problemId } = req.params;
+    const userId = req.result?._id;
+    if (!userId) throw new Error("u Dont have access to this information...");
+    if (!problemId) throw new Error("Something went wrong...");
+    const detail = await SubmissionS.find({
       userId,
-      problemId
-    }).sort({createdAt: -1});
+      problemId,
+    }).sort({ createdAt: -1 });
 
     res.status(200).json(detail);
-  }
-  catch(err){
-    res.status(400).send("Error: "+err.message);
+  } catch (err) {
+    res.status(400).send("Error: " + err.message);
   }
 };
 
-export default { SubmitCode, RunCode , getSubmissionDetail};
+const getcontestSubmissionDetail = async (req, res) => {
+  try {
+    const { contest_id } = req.params;
+    const userId = req.result?._id;
+
+    // 1. Authentication
+    if (!userId) {
+      return res.status(401).json({
+        message: "User is not authenticated.",
+      });
+    }
+
+    // 2. Contest ID
+    if (!contest_id) {
+      return res.status(400).json({
+        message: "Contest is not selected.",
+      });
+    }
+
+    // 3. Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(contest_id)) {
+      return res.status(400).json({
+        message: "Invalid contest ID.",
+      });
+    }
+
+    // 4. Check contest
+    const contestResult = await Contest.findById(contest_id).select(
+      "problem title startTime endTime status"
+    );
+
+    if (!contestResult) {
+      return res.status(404).json({
+        message: "Contest not found.",
+      });
+    }
+
+    // 5. Check participation
+    const isParticipated = await Contestparticipant.findOne({
+      contest_id: contest_id,
+      user_id: userId,
+    });
+
+    if (!isParticipated) {
+      return res.status(403).json({
+        message: "User did not participate in this contest.",
+      });
+    }
+
+    // 6. Get accepted submissions
+    const resultSubmission = await SubmissionS.find({
+      contestId: contest_id,
+      userId: userId,
+      status: "Accepted",
+    }).select("problemId");
+
+    // 7. Store unique solved problems
+    const solvedProblemIds = new Set();
+
+    for (const submission of resultSubmission) {
+      if (submission.problemId) {
+        solvedProblemIds.add(submission.problemId.toString());
+      }
+    }
+
+    // 8. Calculate score
+    let solved = 0;
+    let points = 0;
+
+    for (const problem of contestResult.problem) {
+      if (!problem.problemId) continue;
+
+      if (solvedProblemIds.has(problem.problemId.toString())) {
+        solved++;
+        points += problem.points;
+      }
+    }
+
+    // 9. Save result
+    isParticipated.score = points;
+    isParticipated.resultsCalculated = true;
+
+    await isParticipated.save();
+
+    // 10. Return result
+    return res.status(200).json({
+      title: contestResult.title,
+      totalProblems: contestResult.problem.length,
+      points,
+      solved,
+      solvedProblemIds: [...solvedProblemIds],
+      message: "Contest submission details fetched successfully.",
+    });
+
+  } catch (error) {
+    console.error("getcontestSubmissionDetail error:", error);
+
+    return res.status(500).json({
+      message: "Something went wrong while fetching contest result.",
+    });
+  }
+};
+
+export default { SubmitCode, RunCode, getSubmissionDetail, getcontestSubmissionDetail};

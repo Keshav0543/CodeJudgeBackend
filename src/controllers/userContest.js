@@ -327,7 +327,6 @@ const getSaturdayContests = async (req, res) => {
 
 const FetchAllContest = async (req,res) =>{
   try{
-     console.log("controler working...");
     let {page,limit}=req.query;
     let skip=(Number(page)-1)*Number(limit);
     const contestHistory=await Contest.find({}).sort({createdAt:-1}).skip(skip).limit(Number(limit));

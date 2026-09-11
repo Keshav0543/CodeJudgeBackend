@@ -205,6 +205,31 @@ const ResetPass = async (req, res) => {
   }
 };
 
+const updateProfile = async (req,res) => {
+  try{
+    const userId=req.result._id;
+    const keys=Object.keys(req.body);
+    let isallowed=["firstName","lastName","age","githubProfile","bio"];
+    let updatedFields={};
+    for(const key of keys){
+      if(isallowed.includes(key)){
+        updatedFields[key]=req.body[key];
+      }
+    }
+
+   await User.findByIdAndUpdate(userId,updatedFields);
+
+    res.status(200).json({
+      message:"Profile Updated!!!",
+    });
+  }
+  catch(err){
+    res.status(500).json({
+      message:err.message
+    })
+  }
+};
+
 export default {
   register,
   login,
@@ -215,4 +240,5 @@ export default {
   authenticate,
   ForgotPass,
   ResetPass,
+  updateProfile
 };

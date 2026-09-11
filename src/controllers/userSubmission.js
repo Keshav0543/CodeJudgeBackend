@@ -1,5 +1,6 @@
 import problem from "../models/problem.js";
 import SubmissionS from "../models/Submission.js";
+import User from "../models/user.js";
 import Contest from "../models/contest.js";
 import Contestparticipant from "../models/contestParticipant.js";
 import mongoose from "mongoose";
@@ -114,7 +115,6 @@ const SubmitCode = async (req, res) => {
         continue;
       }
 
-      // pehli baar hi fail hua toh status set karo (varna baad ke passed cases se overwrite ho sakta hai agar tu loop ke bahar bhi kuch check karta hai)
       switch (result.status_id) {
         case 4:
           status = "wrong_answer";
@@ -159,9 +159,9 @@ const SubmitCode = async (req, res) => {
           errorMessage = result.stderr || "Unknown error occurred";
       }
 
-      // pehla fail milte hi loop se bahar niklo (competitive judges aise hi karte hain)
       break;
     }
+
     //Store the result in Database
     SubmittedResult.status = status;
     SubmittedResult.testCasesPassed = testCasesPassed;
@@ -169,18 +169,56 @@ const SubmitCode = async (req, res) => {
     SubmittedResult.memory = memory;
     SubmittedResult.errorMessage = errorMessage;
 
-    if (contestcheck) SubmittedResult.contestId = contest_id;
+    // ---- Accepted ho toh: ek hi User instance pe ProblemSolved + streak dono update ----
+    if (SubmittedResult.status === "Accepted") {
+      const user_details = await User.findById(userId);
+
+      // ProblemSolved me add karo agar naya problem hai
+      const alreadySolved = user_details.ProblemSolved.some(
+        (pid) => pid.toString() === problemId.toString(),
+      );
+      if (!alreadySolved) {
+        user_details.ProblemSolved.push(problemId);
+      }
+
+      // Streak update
+      const currDate = new Date();
+      const todayIST = new Date(
+        currDate.toLocaleDateString("en-US", { timeZone: "Asia/Kolkata" }),
+      );
+
+      if (!user_details.lastActiveDate) {
+        user_details.currentStreak = 1;
+        user_details.longestStreak = Math.max(user_details.longestStreak, 1);
+      } else {
+        const lastActiveIST = new Date(
+          user_details.lastActiveDate.toLocaleDateString("en-US", {
+            timeZone: "Asia/Kolkata",
+          }),
+        );
+
+        const diff = Math.round(
+          (todayIST - lastActiveIST) / (1000 * 60 * 60 * 24),
+        );
+
+        if (diff === 1) {
+          user_details.currentStreak += 1;
+          user_details.longestStreak = Math.max(
+            user_details.longestStreak,
+            user_details.currentStreak,
+          );
+        } else if (diff > 1) {
+          user_details.currentStreak = 1;
+        }
+        // diff === 0 → aaj already solve kiya hai, streak same rahegi
+      }
+
+      user_details.lastActiveDate = currDate;
+      await user_details.save();
+    }
 
     await SubmittedResult.save();
 
-    //Problem Id insert in User Schema problem section if it is not present
-    if (
-      SubmittedResult.status === "Accepted" &&
-      !req.result.ProblemSolved.includes(problemId)
-    ) {
-      req.result.ProblemSolved.push(problemId);
-      await req.result.save();
-    }
     res.status(200).json(SubmittedResult);
   } catch (err) {
     res.status(400).send("Error: " + err.message);
@@ -276,7 +314,7 @@ const getcontestSubmissionDetail = async (req, res) => {
 
     // 4. Check contest
     const contestResult = await Contest.findById(contest_id).select(
-      "problem title startTime endTime status"
+      "problem title startTime endTime status",
     );
 
     if (!contestResult) {
@@ -341,7 +379,6 @@ const getcontestSubmissionDetail = async (req, res) => {
       solvedProblemIds: [...solvedProblemIds],
       message: "Contest submission details fetched successfully.",
     });
-
   } catch (error) {
     console.error("getcontestSubmissionDetail error:", error);
 
@@ -351,4 +388,66 @@ const getcontestSubmissionDetail = async (req, res) => {
   }
 };
 
-export default { SubmitCode, RunCode, getSubmissionDetail, getcontestSubmissionDetail};
+const RecentSubmission = async (req, res) => {
+  try {
+    console.log("req1");
+    const userId = req.result._id;
+    if (!userId) throw new Error("User must be logged in first...");
+
+    const submissions = await SubmissionS.find({
+      userId: userId,
+      status: "Accepted",
+    })
+      .sort({ createdAt: -1 })
+      .populate("problemId", "title difficultylevel")
+      .limit(20);
+
+    // Same problem multiple baar solve/submit ho sakta hai, isliye unique problemId rakho
+    const seen = new Set();
+    const uniqueDetails = [];
+    for (const sub of submissions) {
+      const pid = sub.problemId?._id?.toString();
+      if (pid && !seen.has(pid)) {
+        seen.add(pid);
+        uniqueDetails.push(sub);
+      }
+      if (uniqueDetails.length === 10) break;
+    }
+
+    console.log(uniqueDetails);
+    res.status(200).json({
+      message: "Data fetched successfully!",
+      Details: uniqueDetails,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const totalSubmission = async (req, res) => {
+  try {
+    const userId = req.result._id;
+    if (!userId) throw new Error("User must Logged in first...");
+    const Details = await SubmissionS.find({
+      userId: userId,
+      status: "Accepted",
+    }).distinct("problemId");
+
+    res.status(200).json({
+      totalprob: Details.length,
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: err.message,
+    });
+  }
+};
+
+export default {
+  SubmitCode,
+  RunCode,
+  getSubmissionDetail,
+  getcontestSubmissionDetail,
+  RecentSubmission,
+  totalSubmission,
+};

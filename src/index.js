@@ -6,8 +6,10 @@ import cookieparser from "cookie-parser";
 import authRouter from "./Routes/userauthen.js";
 import client from "./config/redis.js";
 import problemRouter from "./Routes/problemCreator.js";
+import EditorialRoutes from "./Routes/editorialRoutes.js";
 import SubmitRouter from "./Routes/submit.js";
 import ContestRouter from "./Routes/Contest.js";
+import signatureRouter from "./Routes/Signature.js";
 import cors from "cors";
 import "./jobs/SchedularJobs1.js";
 
@@ -25,6 +27,8 @@ app.use("/user",authRouter);
 app.use("/user",problemRouter);
 app.use("/user",SubmitRouter);
 app.use("/user",ContestRouter);
+app.use("/admin",signatureRouter);
+app.use("",EditorialRoutes);
 
 const InitializeConnection=async ()=>{
     try{

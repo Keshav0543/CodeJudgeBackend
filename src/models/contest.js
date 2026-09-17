@@ -21,7 +21,7 @@ const contestSchema = new Schema(
       {
         problemId: {
           type: mongoose.Schema.Types.ObjectId,
-          ref: "problem",
+          ref: "Problem",
           required: true,
         },
         points: {

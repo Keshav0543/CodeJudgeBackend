@@ -33,8 +33,8 @@ async function CreateEditorial(req, res) {
 
 async function UpdateEditorial(req, res) {
   try {
-    const { id } = req.params;
-    const EditorialInfo = await EditorialS.findById(id);
+    const { problemID } = req.params;
+    const EditorialInfo = await EditorialS.findOne({ Problem_id: problemID });
     if (!EditorialInfo)
       return res.status(400).json({ message: "Editorial Not Found..." });
     const keys = ["title", "languages", "sections"];
@@ -54,61 +54,84 @@ async function UpdateEditorial(req, res) {
 
 async function FetchEditorial(req, res) {
   try {
-    const { id } = req.params;
-    const result = await EditorialS.findById(id);
-    if (!result) return res.status(400).json({ messsage: "Data Not found..." });
-    res.status(200).json({
+    const { problemID } = req.params;
+
+    const result = await EditorialS.findOne({
+      Problem_id: problemID,
+    }).lean();
+
+    if (!result) {
+      return res.status(404).json({
+        message: "Data Not found...",
+      });
+    }
+
+    const media = result.media.map((item) => {
+      const url = cloudinary.url(item.publicId, {
+        resource_type: item.type,
+        type: "upload",
+        sign_url: true,
+        secure: true,
+      });
+
+      return {
+        type: item.type,
+        url: url,
+      };
+    });
+
+    result.media = media;
+
+    return res.status(200).json({
       message: "Data fetched...",
       response: result,
     });
   } catch (err) {
-    res.status(401).json({ message: err.message });
+    return res.status(500).json({
+      message: err.message,
+    });
   }
 };
 
 async function deleteEditorial(req, res) {
-    try {
-        const { id } = req.params;
+  try {
+    const { problemID } = req.params;
 
-        const result = await EditorialS.findById(id);
+    const result = await EditorialS.findOne({ Problem_id: problemID });
 
-        if (!result) {
-            return res.status(404).json({
-                message: "Data Not found...",
-            });
-        }
-
-        if (result.media?.length) {
-            for (const data of result.media) {
-
-                if (!data.publicId) continue;
-
-                const cloudinaryResult =
-                    await cloudinary.uploader.destroy(
-                        data.publicId,
-                        {
-                            resource_type: data.type,
-                        }
-                    );
-
-                console.log("Cloudinary:", cloudinaryResult);
-            }
-        }
-
-        await EditorialS.findByIdAndDelete(id);
-
-        return res.status(200).json({
-            message: "Editorial Deleted Successfully...",
-        });
-
-    } catch (err) {
-        console.error(err);
-
-        return res.status(500).json({
-            message: err.message,
-        });
+    if (!result) {
+      return res.status(404).json({
+        message: "Data Not found...",
+      });
     }
-}
+
+    if (result.media?.length) {
+      for (const data of result.media) {
+        if (!data.publicId) continue;
+
+        const cloudinaryResult = await cloudinary.uploader.destroy(
+          data.publicId,
+          {
+            resource_type: data.type,
+          },
+        );
+
+        console.log("Cloudinary:", cloudinaryResult);
+      }
+    };
+
+    await EditorialS.findOneAndDelete({Problem_id: problemID})
+    return res.status(200).json({
+      message: "Editorial Deleted Successfully...",
+    });
+  } catch (err) {
+    console.error(err);
+
+    return res.status(500).json({
+      message: err.message,
+    });
+  }
+};
 
 export default {
   CreateEditorial,

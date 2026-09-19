@@ -105,6 +105,6 @@ problemSchema.index({
     title:1
 });
 
-const Problem=mongoose.model("problem",problemSchema);
+const Problem=mongoose.model("Problem",problemSchema);
 
 export default Problem;

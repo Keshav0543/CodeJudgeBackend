@@ -42,7 +42,7 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { emailId, password } = req.body;
+    const { emailId, password, rememberme } = req.body;
     if (!emailId) throw new Error("Invalid credentials");
     if (!password) throw new Error("Invalid credentials");
 
@@ -50,13 +50,14 @@ const login = async (req, res) => {
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) throw new Error("Invalid credentials");
+    const expiryIn = rememberme ? 60 * 60 * 24 * 7 : 60 * 60;
 
     const token = jwt.sign(
       { _id: user._id, emailId: user.emailId, role: user.role },
       process.env.SECRET_KEY,
-      { expiresIn: 60 * 60 },
+      { expiresIn: expiryIn },
     );
-    res.cookie("token", token, { maxAge: 60 * 60 * 1000 });
+    res.cookie("token", token, { maxAge: expiryIn * 1000 });
 
     const reply = {
       firstName: user.firstName,
@@ -192,16 +193,40 @@ const ResetPass = async (req, res) => {
       return res.status(400).send("Reset link expired or invalid");
     }
 
-    const result=await bcrypt.compare(token,RedisToken);
-    if(!result)throw new Error("Malformed Token...");
-    const NewhasPass=await bcrypt.hash(password,10);
-    const data=await User.findOne({emailId});
-    data.password=NewhasPass;
+    const result = await bcrypt.compare(token, RedisToken);
+    if (!result) throw new Error("Malformed Token...");
+    const NewhasPass = await bcrypt.hash(password, 10);
+    const data = await User.findOne({ emailId });
+    data.password = NewhasPass;
     await data.save();
     await client.del(key);
     res.status(200).send("Password Changed SuccessFully...");
   } catch (err) {
     res.status(500).send(`Error: ${err.message}`);
+  }
+};
+
+const updateProfile = async (req, res) => {
+  try {
+    const userId = req.result._id;
+    const keys = Object.keys(req.body);
+    let isallowed = ["firstName", "lastName", "age", "githubProfile", "bio"];
+    let updatedFields = {};
+    for (const key of keys) {
+      if (isallowed.includes(key)) {
+        updatedFields[key] = req.body[key];
+      }
+    }
+
+    await User.findByIdAndUpdate(userId, updatedFields);
+
+    res.status(200).json({
+      message: "Profile Updated!!!",
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: err.message,
+    });
   }
 };
 
@@ -215,4 +240,5 @@ export default {
   authenticate,
   ForgotPass,
   ResetPass,
+  updateProfile,
 };

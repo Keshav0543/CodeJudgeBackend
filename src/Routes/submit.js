@@ -9,5 +9,8 @@ SubmitRouter.post("/submit/:id", userMiddleware, SubmitLimiter, SubmitController
 SubmitRouter.post("/run/:id", userMiddleware, RunrateLimit, SubmitController.RunCode);
 SubmitRouter.get("/submission/:problemId", userMiddleware, SubmitController.getSubmissionDetail);
 SubmitRouter.get("/contest/:contest_id/solved",userMiddleware,SubmitController.getcontestSubmissionDetail);
+SubmitRouter.get("/recent/submission",userMiddleware,SubmitController.RecentSubmission);
+SubmitRouter.get("/total/submission",userMiddleware,SubmitController.totalSubmission);
+
 
 export default SubmitRouter;
